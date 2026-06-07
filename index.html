@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pulveriza Safra</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <div class="brand">
+          <span class="brand-icon" aria-hidden="true">🌿</span>
+          <div>
+            <strong>Pulveriza Safra</strong>
+            <small>Manejo registrado no campo</small>
+          </div>
+        </div>
+        <nav class="nav-list" id="navList"></nav>
+        <div class="safety-card">
+          <strong>Aviso importante</strong>
+          <p>Este aplicativo registra e organiza dados de manejo. Produtos, doses e carências devem seguir bula, receituário agronômico e orientação profissional habilitada.</p>
+        </div>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu">☰</button>
+          <div>
+            <span class="eyebrow">Aplicativo responsivo</span>
+            <h1 id="pageTitle">Dashboard</h1>
+          </div>
+          <button class="primary compact" data-goto="nova">+ Nova aplicação</button>
+        </header>
+
+        <section id="dashboard" class="screen active" aria-labelledby="dashboard-title">
+          <div class="hero-card">
+            <div>
+              <span class="eyebrow">Hoje no Campo</span>
+              <h2 id="dashboard-title">Resumo operacional da safra</h2>
+              <p>Veja reaplicações, riscos climáticos, estoque e custos em uma tela simples para decisão rápida no celular.</p>
+            </div>
+            <div class="hero-date" id="todayLabel"></div>
+          </div>
+          <div class="metric-grid" id="todayMetrics"></div>
+          <div class="two-columns">
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>Alertas críticos</h3>
+                <button class="ghost" data-goto="alertas">Ver todos</button>
+              </div>
+              <div id="dashboardAlerts" class="stack"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>Estoque e cobertura</h3>
+                <button class="ghost" data-goto="produtos">Produtos</button>
+              </div>
+              <div id="stockCoverage" class="stack"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="culturas" class="screen" aria-labelledby="culturas-title">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Cadastro livre</span>
+              <h2 id="culturas-title">Culturas</h2>
+            </div>
+          </div>
+          <form id="cultureForm" class="form-card">
+            <input type="hidden" name="id" />
+            <label>Nome da cultura<input name="name" required placeholder="Ex.: Soja" /></label>
+            <label>Safra<input name="season" required placeholder="Ex.: 2025/2026" /></label>
+            <label>Área total (ha)<input name="area" type="number" min="0" step="0.01" required /></label>
+            <label class="full">Observação<textarea name="note" rows="3" placeholder="Anotações gerais"></textarea></label>
+            <button class="primary" type="submit">Salvar cultura</button>
+          </form>
+          <div id="cultureList" class="card-list"></div>
+        </section>
+
+        <section id="talhoes" class="screen" aria-labelledby="talhoes-title">
+          <div class="section-heading"><div><span class="eyebrow">Áreas de manejo</span><h2 id="talhoes-title">Talhões / Locais</h2></div></div>
+          <form id="fieldForm" class="form-card">
+            <input type="hidden" name="id" />
+            <label>Nome do talhão/local<input name="name" required placeholder="Ex.: Talhão Norte" /></label>
+            <label>Cultura vinculada<select name="cultureId" required></select></label>
+            <label>Hectares<input name="hectares" type="number" min="0" step="0.01" required /></label>
+            <label class="full">Observação<textarea name="note" rows="3"></textarea></label>
+            <button class="primary" type="submit">Salvar talhão/local</button>
+          </form>
+          <div id="fieldList" class="card-list"></div>
+        </section>
+
+        <section id="produtos" class="screen" aria-labelledby="produtos-title">
+          <div class="section-heading"><div><span class="eyebrow">Produtos e estoque</span><h2 id="produtos-title">Produtos / Estoque</h2></div></div>
+          <form id="productForm" class="form-card">
+            <input type="hidden" name="id" />
+            <label>Nome do produto<input name="name" required placeholder="Produto comercial" /></label>
+            <label>Tipo<select name="type" required><option>Herbicida</option><option>Fungicida</option><option>Inseticida</option><option>Adjuvante</option><option>Fertilizante foliar</option><option>Outro</option></select></label>
+            <label>Unidade<select name="unit" required><option>L</option><option>ml</option><option>kg</option><option>g</option></select></label>
+            <label>Quantidade comprada<input name="purchased" type="number" min="0.001" step="0.001" required /></label>
+            <label>Preço total pago (R$)<input name="totalPrice" type="number" min="0" step="0.01" required /></label>
+            <label>Custo unitário calculado<input name="unitCost" type="text" readonly /></label>
+            <label>Quantidade em estoque<input name="stock" type="number" min="0" step="0.001" required /></label>
+            <label>Estoque mínimo<input name="minStock" type="number" min="0" step="0.001" required /></label>
+            <label>Dose de referência/ha<input name="doseReference" type="number" min="0" step="0.001" placeholder="Para estimar cobertura" /></label>
+            <label class="full">Observação<textarea name="note" rows="3"></textarea></label>
+            <button class="primary" type="submit">Salvar produto</button>
+          </form>
+          <div id="productList" class="card-list"></div>
+        </section>
+
+        <section id="nova" class="screen" aria-labelledby="nova-title">
+          <div class="section-heading">
+            <div><span class="eyebrow">Registro rápido</span><h2 id="nova-title">Nova Aplicação</h2></div>
+            <div class="mode-buttons"><button id="manualMode" class="primary" type="button">Registrar manualmente</button><button id="voiceMode" class="secondary" type="button">Registrar por voz/texto</button></div>
+          </div>
+          <div id="voicePanel" class="voice-panel hidden">
+            <h3>Registrar por voz ou texto</h3>
+            <p>Fale ou digite uma descrição. O sistema interpreta os dados e mostra confirmação antes de salvar.</p>
+            <textarea id="voiceText" rows="5" placeholder="Ex.: Hoje apliquei 20 hectares de soja no Talhão Norte com Produto X, dose 1.5 L por hectare, usei 31 L, vento pouco, choveu até 3h, reaplicar em 14 dias, carência 7 dias..."></textarea>
+            <div class="button-row"><button id="speechButton" class="secondary" type="button">🎙️ Usar microfone</button><button id="interpretButton" class="primary" type="button">Interpretar e revisar</button></div>
+            <div id="voiceStatus" class="voice-status" aria-live="polite"></div>
+          </div>
+          <form id="applicationForm" class="form-card application-form">
+            <input type="hidden" name="id" />
+            <label>Data<input name="date" type="date" required /></label>
+            <label>Cultura<select name="cultureId" required></select></label>
+            <label>Talhão/local<select name="fieldId" required></select></label>
+            <label>Hectares aplicados<input name="hectares" type="number" min="0.01" step="0.01" required /></label>
+            <label>Produto<select name="productId" required></select></label>
+            <label>Tipo do produto<input name="productType" readonly /></label>
+            <label>Dose por hectare<input name="dose" type="number" min="0" step="0.001" required /></label>
+            <label>Quantidade calculada<input name="calculatedQty" readonly /></label>
+            <label>Quantidade realmente usada<input name="usedQty" type="number" min="0" step="0.001" required /></label>
+            <label>Custo total<input name="totalCost" readonly /></label>
+            <label>Custo por hectare<input name="costPerHa" readonly /></label>
+            <label>Diferença percentual<input name="difference" readonly /></label>
+            <label>Motivo<select name="reason"><option>Praga</option><option>Doença</option><option>Mato</option><option>Preventivo</option><option>Outro</option></select></label>
+            <label>Nome do problema<input name="problem" placeholder="Ex.: ferrugem, buva, lagarta" /></label>
+            <label>Nível percebido<select name="level"><option>Baixo</option><option>Médio</option><option>Alto</option></select></label>
+            <label>Operador<input name="operator" placeholder="Nome do operador" /></label>
+            <fieldset class="full checklist"><legend>Condições do clima</legend>
+              <label>Tinha vento?<select name="wind"><option>Não</option><option>Pouco</option><option>Forte</option></select></label>
+              <label>Tinha neblina?<select name="fog"><option>Não</option><option>Sim</option></select></label>
+              <label>Choveu depois?<select name="rainAfter"><option>Não</option><option>Até 1h</option><option>Até 3h</option><option>No mesmo dia</option></select></label>
+              <label>Solo estava molhado?<select name="wetSoil"><option>Não</option><option>Sim</option></select></label>
+              <label>Horário<select name="timeOfDay"><option>Manhã</option><option>Tarde</option><option>Noite</option></select></label>
+            </fieldset>
+            <fieldset class="full quick-days"><legend>Reaplicação e carência</legend>
+              <label>Reaplicar em quantos dias<input name="reapplyDays" type="number" min="0" step="1" /></label>
+              <div class="quick-actions" aria-label="Opções rápidas"><button type="button" data-days="3">3 dias</button><button type="button" data-days="7">7 dias</button><button type="button" data-days="10">10 dias</button><button type="button" data-days="14">14 dias</button><button type="button" data-days="21">21 dias</button></div>
+              <label>Data personalizada<input name="customReapplyDate" type="date" /></label>
+              <label>Dias de carência<input name="graceDays" type="number" min="0" step="1" /></label>
+              <label>Próxima reaplicação<input name="nextReapply" readonly /></label>
+              <label>Fim da carência<input name="graceEnd" readonly /></label>
+            </fieldset>
+            <div id="applicationWarnings" class="full warnings"></div>
+            <label class="full">Observação<textarea name="note" rows="3"></textarea></label>
+            <button class="primary full" type="submit">Confirmar e salvar aplicação</button>
+          </form>
+        </section>
+
+        <section id="alertas" class="screen" aria-labelledby="alertas-title">
+          <div class="section-heading"><div><span class="eyebrow">Prioridades</span><h2 id="alertas-title">Alertas</h2></div></div>
+          <div id="alertsList" class="alert-grid"></div>
+        </section>
+
+        <section id="historico" class="screen" aria-labelledby="historico-title">
+          <div class="section-heading"><div><span class="eyebrow">Consulta</span><h2 id="historico-title">Histórico</h2></div></div>
+          <form id="historyFilters" class="filter-card">
+            <label>Cultura<select name="cultureId"><option value="">Todas</option></select></label>
+            <label>Talhão<select name="fieldId"><option value="">Todos</option></select></label>
+            <label>Produto<select name="productId"><option value="">Todos</option></select></label>
+            <label>Operador<input name="operator" placeholder="Todos" /></label>
+            <label>Início<input name="start" type="date" /></label>
+            <label>Fim<input name="end" type="date" /></label>
+            <label><input name="riskOnly" type="checkbox" /> Aplicações com risco</label>
+            <label><input name="lateOnly" type="checkbox" /> Aplicações atrasadas</label>
+          </form>
+          <div id="historyList" class="card-list"></div>
+        </section>
+
+        <section id="relatorios" class="screen" aria-labelledby="relatorios-title">
+          <div class="section-heading"><div><span class="eyebrow">Indicadores</span><h2 id="relatorios-title">Relatórios</h2></div></div>
+          <div id="reportsGrid" class="reports-grid"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
