@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pulveriza Safra</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Controle de aplicações agrícolas</p>
+        <h1>Pulveriza Safra</h1>
+      </div>
+      <button class="primary-action" data-open-section="nova-aplicacao">+ Nova aplicação</button>
+    </header>
+
+    <nav class="tab-bar" aria-label="Navegação principal">
+      <button class="tab active" data-section="dashboard">Dashboard</button>
+      <button class="tab" data-section="culturas">Culturas</button>
+      <button class="tab" data-section="talhoes">Talhões</button>
+      <button class="tab" data-section="produtos">Produtos</button>
+      <button class="tab" data-section="nova-aplicacao">Nova aplicação</button>
+      <button class="tab" data-section="alertas">Alertas</button>
+      <button class="tab" data-section="historico">Histórico</button>
+      <button class="tab" data-section="relatorios">Relatórios</button>
+    </nav>
+
+    <main>
+      <section id="dashboard" class="screen active-screen">
+        <div class="hero-card">
+          <div>
+            <p class="eyebrow">Hoje no Campo</p>
+            <h2>Resumo operacional da safra</h2>
+            <p>Veja prazos, riscos climáticos, estoque e custos antes de ir para o campo.</p>
+          </div>
+          <div class="hero-icon" aria-hidden="true">🌱</div>
+        </div>
+        <div id="dashboardCards" class="metric-grid"></div>
+      </section>
+
+      <section id="culturas" class="screen">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Cadastro</p>
+            <h2>Culturas</h2>
+          </div>
+          <button class="secondary-action" data-reset-form="cultureForm">Limpar</button>
+        </div>
+        <form id="cultureForm" class="form-card">
+          <input type="hidden" id="cultureId" />
+          <label>Nome da cultura<input id="cultureName" required placeholder="Ex.: Soja" /></label>
+          <label>Safra<input id="cultureSeason" placeholder="Ex.: 2025/2026" /></label>
+          <label>Área total (ha)<input id="cultureArea" type="number" min="0" step="0.01" placeholder="0,00" /></label>
+          <label class="wide">Observação<textarea id="cultureNote" rows="3" placeholder="Observações gerais"></textarea></label>
+          <button class="primary-action wide" type="submit">Salvar cultura</button>
+        </form>
+        <div id="cultureList" class="list-grid"></div>
+      </section>
+
+      <section id="talhoes" class="screen">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Áreas</p>
+            <h2>Talhões / Locais</h2>
+          </div>
+          <button class="secondary-action" data-reset-form="fieldForm">Limpar</button>
+        </div>
+        <form id="fieldForm" class="form-card">
+          <input type="hidden" id="fieldId" />
+          <label>Nome do talhão/local<input id="fieldName" required placeholder="Ex.: Talhão 02" /></label>
+          <label>Cultura vinculada<select id="fieldCulture"></select></label>
+          <label>Hectares<input id="fieldHectares" type="number" min="0" step="0.01" placeholder="0,00" /></label>
+          <label class="wide">Observação<textarea id="fieldNote" rows="3"></textarea></label>
+          <button class="primary-action wide" type="submit">Salvar talhão/local</button>
+        </form>
+        <div id="fieldList" class="list-grid"></div>
+      </section>
+
+      <section id="produtos" class="screen">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Estoque</p>
+            <h2>Produtos / Estoque</h2>
+          </div>
+          <button class="secondary-action" data-reset-form="productForm">Limpar</button>
+        </div>
+        <form id="productForm" class="form-card">
+          <input type="hidden" id="productId" />
+          <label>Nome do produto<input id="productName" required placeholder="Ex.: Produto A" /></label>
+          <label>Tipo<select id="productType"></select></label>
+          <label>Unidade<select id="productUnit"></select></label>
+          <label>Quantidade comprada<input id="productPurchased" type="number" min="0" step="0.001" /></label>
+          <label>Preço total pago (R$)<input id="productPrice" type="number" min="0" step="0.01" /></label>
+          <label>Custo unitário (auto)<input id="productUnitCost" readonly /></label>
+          <label>Quantidade em estoque<input id="productStock" type="number" min="0" step="0.001" /></label>
+          <label>Estoque mínimo<input id="productMinStock" type="number" min="0" step="0.001" /></label>
+          <label>Dose referência por ha<input id="productDoseRef" type="number" min="0" step="0.001" placeholder="Para estimar cobertura" /></label>
+          <label class="wide">Observação<textarea id="productNote" rows="3"></textarea></label>
+          <button class="primary-action wide" type="submit">Salvar produto</button>
+        </form>
+        <div id="productList" class="list-grid"></div>
+      </section>
+
+      <section id="nova-aplicacao" class="screen">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Registro</p>
+            <h2>Nova Aplicação</h2>
+          </div>
+        </div>
+        <div class="mode-switch">
+          <button id="manualMode" class="primary-action" type="button">Registrar manualmente</button>
+          <button id="voiceMode" class="secondary-action" type="button">Registrar por voz ou texto</button>
+        </div>
+        <div id="voicePanel" class="form-card hidden">
+          <label class="wide">Fale ou digite a descrição da aplicação
+            <textarea id="voiceText" rows="5" placeholder="Ex.: Ontem apliquei 12 hectares de soja no talhão norte com Produto A, dose 1,5 L por hectare..."></textarea>
+          </label>
+          <button id="interpretText" class="primary-action wide" type="button">Interpretar e revisar</button>
+          <p class="hint">Nunca salvamos automaticamente: revise e confirme os campos no formulário.</p>
+        </div>
+        <form id="applicationForm" class="form-card">
+          <input type="hidden" id="applicationId" />
+          <label>Data<input id="applicationDate" type="date" required /></label>
+          <label>Cultura<select id="applicationCulture"></select></label>
+          <label>Talhão/local<select id="applicationField"></select></label>
+          <label>Hectares aplicados<input id="applicationHectares" type="number" min="0" step="0.01" /></label>
+          <label>Produto<select id="applicationProduct"></select></label>
+          <label>Tipo do produto<input id="applicationProductType" readonly /></label>
+          <label>Dose por hectare<input id="applicationDose" type="number" min="0" step="0.001" /></label>
+          <label>Quantidade calculada<input id="applicationCalculatedQty" readonly /></label>
+          <label>Quantidade realmente usada<input id="applicationUsedQty" type="number" min="0" step="0.001" /></label>
+          <label>Custo total<input id="applicationTotalCost" readonly /></label>
+          <label>Custo por hectare<input id="applicationCostHa" readonly /></label>
+          <label>Diferença percentual<input id="applicationDifference" readonly /></label>
+          <label>Motivo da aplicação<select id="applicationReason"></select></label>
+          <label>Nome do problema<input id="applicationProblem" placeholder="Ex.: ferrugem, lagarta, buva" /></label>
+          <label>Nível percebido<select id="applicationLevel"></select></label>
+          <label>Operador<input id="applicationOperator" placeholder="Nome do operador" /></label>
+          <label>Reaplicar em<select id="applicationReapplyQuick"></select></label>
+          <label>Data personalizada<input id="applicationReapplyCustom" type="date" /></label>
+          <label>Próxima reaplicação<input id="applicationNextReapply" readonly /></label>
+          <label>Dias de carência<input id="applicationGraceDays" type="number" min="0" step="1" /></label>
+          <label>Fim da carência<input id="applicationGraceEnd" readonly /></label>
+          <fieldset class="wide climate-box">
+            <legend>Condições do clima</legend>
+            <label>Tinha vento?<select id="weatherWind"></select></label>
+            <label>Tinha neblina?<select id="weatherFog"></select></label>
+            <label>Choveu depois?<select id="weatherRain"></select></label>
+            <label>Solo estava molhado?<select id="weatherWetSoil"></select></label>
+            <label>Horário<select id="weatherPeriod"></select></label>
+          </fieldset>
+          <label class="wide">Observação<textarea id="applicationNote" rows="3"></textarea></label>
+          <div id="applicationAlerts" class="wide inline-alerts"></div>
+          <button class="primary-action wide" type="submit">Confirmar e salvar aplicação</button>
+        </form>
+      </section>
+
+      <section id="alertas" class="screen">
+        <div class="section-heading"><div><p class="eyebrow">Atenção</p><h2>Alertas</h2></div></div>
+        <div id="alertsList" class="alert-list"></div>
+      </section>
+
+      <section id="historico" class="screen">
+        <div class="section-heading"><div><p class="eyebrow">Consulta</p><h2>Histórico</h2></div></div>
+        <form id="historyFilters" class="filter-card">
+          <label>Cultura<select id="filterCulture"></select></label>
+          <label>Talhão<select id="filterField"></select></label>
+          <label>Produto<select id="filterProduct"></select></label>
+          <label>Operador<input id="filterOperator" /></label>
+          <label>De<input id="filterFrom" type="date" /></label>
+          <label>Até<input id="filterTo" type="date" /></label>
+          <label><span>Com risco</span><input id="filterRisk" type="checkbox" /></label>
+          <label><span>Atrasadas</span><input id="filterLate" type="checkbox" /></label>
+        </form>
+        <div id="historyList" class="list-grid"></div>
+      </section>
+
+      <section id="relatorios" class="screen">
+        <div class="section-heading"><div><p class="eyebrow">Gestão</p><h2>Relatórios</h2></div></div>
+        <div id="reportsGrid" class="report-grid"></div>
+      </section>
+    </main>
+
+    <footer>
+      <strong>Aviso:</strong> Este aplicativo registra e organiza dados de manejo. Produtos, doses e carências devem seguir bula, receituário agronômico e orientação profissional habilitada.
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
