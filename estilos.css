@@ -71,6 +71,7 @@ button { cursor: pointer; }
   background: radial-gradient(circle at top right, rgba(60,143,91,.2), transparent 38%), var(--card);
 }
 .hero-card p { color: var(--muted); max-width: 760px; line-height: 1.55; }
+.hero-actions { display: grid; gap: 10px; min-width: 190px; }
 .hero-date { padding: 14px 16px; border-radius: 18px; background: #edf5e7; color: var(--green-950); font-weight: 800; text-align: center; }
 .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
 .metric { padding: 18px; border-radius: 20px; background: var(--card); border: 1px solid var(--border); }

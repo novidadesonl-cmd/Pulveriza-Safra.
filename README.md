@@ -14,7 +14,7 @@ Depois acesse `http://127.0.0.1:4173`.
 
 ## Funcionalidades
 
-- Dashboard "Hoje no Campo" com reaplicações, atrasos, riscos, estoque baixo e custos da safra.
+- Dashboard "Hoje no Campo" com reaplicações, atrasos, riscos, estoque baixo, custos da safra e atalho "🎙️ Falar aplicação" para a IA de Campo.
 - Cadastro de culturas, talhões/locais e produtos com estoque.
 - Cálculo automático de custo unitário, quantidade calculada, custo total, custo por hectare e diferença percentual de dose.
 - Baixa automática do estoque ao salvar uma aplicação.

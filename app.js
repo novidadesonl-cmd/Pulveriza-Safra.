@@ -350,7 +350,7 @@ function parseApplicationNarrative(text, statusElementId = 'voiceStatus') {
   const dose = plain.match(/dose\s*(?:de)?\s*(\d+(?:[,.]\d+)?)/) || plain.match(/(\d+(?:[,.]\d+)?)\s*(?:l|ml|kg|g)\s*(?:por|\/)?\s*(?:ha|hectare)/); if (dose) form.elements.dose.value = dose[1].replace(',', '.');
   const used = plain.match(/(?:usei|usado|usou|gastei|quantidade usada)\s*(\d+(?:[,.]\d+)?)/); if (used) form.elements.usedQty.value = used[1].replace(',', '.');
   if (plain.includes('vento forte')) form.elements.wind.value = 'Forte'; else if (plain.includes('vento pouco') || plain.includes('pouco vento')) form.elements.wind.value = 'Pouco'; else if (plain.includes('sem vento')) form.elements.wind.value = 'Não';
-  if (plain.includes('neblina')) form.elements.fog.value = 'Sim'; else if (plain.includes('sem neblina')) form.elements.fog.value = 'Não';
+  if (plain.includes('sem neblina')) form.elements.fog.value = 'Não'; else if (plain.includes('neblina')) form.elements.fog.value = 'Sim';
   if (plain.includes('ate 1h') || plain.includes('ate 1 hora')) form.elements.rainAfter.value = 'Até 1h'; else if (plain.includes('ate 3h') || plain.includes('ate 3 horas')) form.elements.rainAfter.value = 'Até 3h'; else if (plain.includes('mesmo dia')) form.elements.rainAfter.value = 'No mesmo dia'; else if (plain.includes('nao choveu') || plain.includes('sem chuva')) form.elements.rainAfter.value = 'Não';
   if (plain.includes('solo molhado')) form.elements.wetSoil.value = 'Sim'; else if (plain.includes('solo seco')) form.elements.wetSoil.value = 'Não';
   ['manha', 'tarde', 'noite'].forEach(period => { if (plain.includes(period)) form.elements.timeOfDay.value = period === 'manha' ? 'Manhã' : period[0].toUpperCase() + period.slice(1); });
