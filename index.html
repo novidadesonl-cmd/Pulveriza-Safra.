@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="estilos.css" />
   </head>
   <body>
     <div class="app-shell">
@@ -33,7 +33,7 @@
             <span class="eyebrow">Aplicativo responsivo</span>
             <h1 id="pageTitle">Dashboard</h1>
           </div>
-          <button class="primary compact" data-goto="nova">+ Nova aplicação</button>
+          <div class="top-actions"><button class="secondary compact" data-goto="ia">🎙️ Falar aplicação</button><button class="primary compact" data-goto="nova">+ Nova aplicação</button></div>
         </header>
 
         <section id="dashboard" class="screen active" aria-labelledby="dashboard-title">
@@ -168,6 +168,41 @@
         <section id="alertas" class="screen" aria-labelledby="alertas-title">
           <div class="section-heading"><div><span class="eyebrow">Prioridades</span><h2 id="alertas-title">Alertas</h2></div></div>
           <div id="alertsList" class="alert-grid"></div>
+        </section>
+
+        <section id="ia" class="screen" aria-labelledby="ia-title">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">IA de Campo</span>
+              <h2 id="ia-title">Registrar aplicação por relato</h2>
+            </div>
+            <button class="ghost" data-goto="nova" type="button">Editar manualmente</button>
+          </div>
+          <article class="ai-card">
+            <div>
+              <h3>Digite ou fale o que aconteceu no campo</h3>
+              <p>A IA de Campo tenta identificar data, cultura, talhão, área, produto, dose, quantidade usada, clima, motivo, reaplicação e carência. Nada é salvo automaticamente: revise tudo antes de confirmar.</p>
+            </div>
+            <textarea id="aiText" rows="6" placeholder="Ex.: Hoje apliquei 20 hectares de soja no Talhão Norte com FungoMax, dose 0,5 L por hectare, usei 10 L, vento pouco, sem neblina, choveu até 3h, motivo preventivo, reaplicar em 14 dias, carência 7 dias, operador João."></textarea>
+            <div class="button-row">
+              <button id="aiSpeechButton" class="secondary" type="button">🎙️ Falar relato</button>
+              <button id="aiInterpretButton" class="primary" type="button">Interpretar relato</button>
+            </div>
+            <div id="aiStatus" class="voice-status" aria-live="polite"></div>
+          </article>
+          <article id="aiConfirmation" class="ai-confirmation hidden">
+            <div class="panel-heading">
+              <div>
+                <span class="eyebrow">Confirmação obrigatória</span>
+                <h3>Revise os campos interpretados antes de salvar</h3>
+              </div>
+            </div>
+            <div id="aiStructuredFields" class="structured-grid"></div>
+            <div class="button-row">
+              <button id="aiEditApplication" class="secondary" type="button" data-goto="nova">Editar campos</button>
+              <button id="aiConfirmSave" class="primary" type="button">Confirmar e salvar aplicação</button>
+            </div>
+          </article>
         </section>
 
         <section id="historico" class="screen" aria-labelledby="historico-title">

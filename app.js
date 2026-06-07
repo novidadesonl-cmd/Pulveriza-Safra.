@@ -9,6 +9,7 @@ const navItems = [
   ['produtos', '🧪', 'Produtos / Estoque'],
   ['nova', '🚜', 'Nova Aplicação'],
   ['alertas', '⚠️', 'Alertas'],
+  ['ia', '🤖', 'IA de Campo'],
   ['historico', '📒', 'Histórico'],
   ['relatorios', '📊', 'Relatórios'],
 ];
@@ -111,7 +112,10 @@ function bindForms() {
   document.getElementById('manualMode').addEventListener('click', () => document.getElementById('voicePanel').classList.add('hidden'));
   document.getElementById('voiceMode').addEventListener('click', () => document.getElementById('voicePanel').classList.toggle('hidden'));
   document.getElementById('interpretButton').addEventListener('click', interpretVoiceText);
-  document.getElementById('speechButton').addEventListener('click', startSpeechCapture);
+  document.getElementById('speechButton').addEventListener('click', () => startSpeechCapture('voiceText'));
+  document.getElementById('aiSpeechButton').addEventListener('click', () => startSpeechCapture('aiText'));
+  document.getElementById('aiInterpretButton').addEventListener('click', interpretAiFieldText);
+  document.getElementById('aiConfirmSave').addEventListener('click', confirmAiApplication);
   document.querySelectorAll('[data-days]').forEach(button => button.addEventListener('click', () => {
     const form = document.getElementById('applicationForm');
     form.elements.reapplyDays.value = button.dataset.days;
@@ -135,28 +139,43 @@ function bindApplicationCalculations() {
   });
   form.addEventListener('submit', event => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(form));
-    const product = getProduct(data.productId);
-    const risk = calculateRisk(data);
-    const calculatedQty = Number(data.dose || 0) * Number(data.hectares || 0);
-    const unitCost = productUnitCost(product);
-    const usedQty = Number(data.usedQty || 0);
-    const totalCost = usedQty * unitCost;
-    const app = {
-      id: data.id || id(), date: data.date, cultureId: data.cultureId, fieldId: data.fieldId, hectares: Number(data.hectares),
-      productId: data.productId, productType: data.productType, dose: Number(data.dose), calculatedQty, usedQty,
-      totalCost, costPerHa: Number(data.hectares) ? totalCost / Number(data.hectares) : 0,
-      difference: calculatedQty ? ((usedQty - calculatedQty) / calculatedQty) * 100 : 0,
-      reason: data.reason, problem: data.problem || 'Não informado', level: data.level, operator: data.operator || 'Não informado', note: data.note,
-      weather: { wind: data.wind, fog: data.fog, rainAfter: data.rainAfter, wetSoil: data.wetSoil, timeOfDay: data.timeOfDay },
-      risk, reapplyDays: Number(data.reapplyDays || 0), nextReapply: data.customReapplyDate || (data.reapplyDays ? addDays(data.date, data.reapplyDays) : ''),
-      graceDays: Number(data.graceDays || 0), graceEnd: data.graceDays ? addDays(data.date, data.graceDays) : '',
-    };
-    if (product) product.stock = Math.max(0, Number(product.stock || 0) - usedQty);
-    state.applications.push(app);
-    saveState(); form.reset(); form.elements.date.value = todayISO(); toast('Aplicação salva e estoque atualizado.'); renderAll(); showScreen('dashboard');
+    saveApplicationFromForm(form);
   });
 }
+function saveApplicationFromForm(form) {
+  const data = Object.fromEntries(new FormData(form));
+  const required = [
+    ['date', 'data'], ['cultureId', 'cultura'], ['fieldId', 'talhão/local'], ['productId', 'produto'],
+    ['hectares', 'hectares aplicados'], ['dose', 'dose por hectare'], ['usedQty', 'quantidade realmente usada'],
+  ];
+  const missing = required.filter(([name]) => !data[name]).map(([, label]) => label);
+  if (missing.length) {
+    toast(`Revise antes de salvar. Não informado: ${missing.join(', ')}.`);
+    showScreen('nova');
+    return false;
+  }
+  const product = getProduct(data.productId);
+  const risk = calculateRisk(data);
+  const calculatedQty = Number(data.dose || 0) * Number(data.hectares || 0);
+  const unitCost = productUnitCost(product);
+  const usedQty = Number(data.usedQty || 0);
+  const totalCost = usedQty * unitCost;
+  const app = {
+    id: data.id || id(), date: data.date, cultureId: data.cultureId, fieldId: data.fieldId, hectares: Number(data.hectares),
+    productId: data.productId, productType: data.productType, dose: Number(data.dose), calculatedQty, usedQty,
+    totalCost, costPerHa: Number(data.hectares) ? totalCost / Number(data.hectares) : 0,
+    difference: calculatedQty ? ((usedQty - calculatedQty) / calculatedQty) * 100 : 0,
+    reason: data.reason, problem: data.problem || 'Não informado', level: data.level, operator: data.operator || 'Não informado', note: data.note || '',
+    weather: { wind: data.wind, fog: data.fog, rainAfter: data.rainAfter, wetSoil: data.wetSoil, timeOfDay: data.timeOfDay },
+    risk, reapplyDays: Number(data.reapplyDays || 0), nextReapply: data.customReapplyDate || (data.reapplyDays ? addDays(data.date, data.reapplyDays) : ''),
+    graceDays: Number(data.graceDays || 0), graceEnd: data.graceDays ? addDays(data.date, data.graceDays) : '',
+  };
+  if (product) product.stock = Math.max(0, Number(product.stock || 0) - usedQty);
+  state.applications.push(app);
+  saveState(); form.reset(); form.elements.date.value = todayISO(); toast('Aplicação salva e estoque atualizado.'); renderAll(); showScreen('dashboard');
+  return true;
+}
+
 function updateApplicationCalculations() {
   const form = document.getElementById('applicationForm');
   const data = Object.fromEntries(new FormData(form));
@@ -306,9 +325,11 @@ function sumBy(items, keyFn, valueFn) { return items.reduce((acc, item) => { con
 function formatMap(map, formatter) { const entries = Object.entries(map); return entries.length ? entries.map(([k, v]) => `${k}: ${formatter(v)}`).join('<br>') : 'Sem dados'; }
 function formatDate(date) { return new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR'); }
 
-function interpretVoiceText() {
-  const text = document.getElementById('voiceText').value;
-  if (!text.trim()) return toast('Digite ou fale uma descrição antes de interpretar.');
+function parseApplicationNarrative(text, statusElementId = 'voiceStatus') {
+  if (!text.trim()) {
+    toast('Digite ou fale uma descrição antes de interpretar.');
+    return false;
+  }
   const form = document.getElementById('applicationForm');
   const plain = normalize(text);
   const dateMatch = plain.match(/(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?/);
@@ -318,33 +339,90 @@ function interpretVoiceText() {
     form.elements.date.value = `${year}-${dateMatch[2].padStart(2, '0')}-${dateMatch[1].padStart(2, '0')}`;
   }
   selectByText(form.elements.cultureId, state.cultures, plain); syncFieldsToCulture(); selectByText(form.elements.fieldId, state.fields, plain); selectByText(form.elements.productId, state.products, plain);
+  const product = getProduct(form.elements.productId.value);
+  if (plain.includes('herbicida')) form.elements.productType.value = 'Herbicida';
+  if (plain.includes('fungicida')) form.elements.productType.value = 'Fungicida';
+  if (plain.includes('inseticida')) form.elements.productType.value = 'Inseticida';
+  if (plain.includes('adjuvante')) form.elements.productType.value = 'Adjuvante';
+  if (plain.includes('fertilizante foliar')) form.elements.productType.value = 'Fertilizante foliar';
+  if (product) form.elements.productType.value = product.type;
   const area = plain.match(/(\d+(?:[,.]\d+)?)\s*(?:ha|hectare|hectares)/); if (area) form.elements.hectares.value = area[1].replace(',', '.');
   const dose = plain.match(/dose\s*(?:de)?\s*(\d+(?:[,.]\d+)?)/) || plain.match(/(\d+(?:[,.]\d+)?)\s*(?:l|ml|kg|g)\s*(?:por|\/)?\s*(?:ha|hectare)/); if (dose) form.elements.dose.value = dose[1].replace(',', '.');
-  const used = plain.match(/(?:usei|usado|usou|gastei)\s*(\d+(?:[,.]\d+)?)/); if (used) form.elements.usedQty.value = used[1].replace(',', '.');
+  const used = plain.match(/(?:usei|usado|usou|gastei|quantidade usada)\s*(\d+(?:[,.]\d+)?)/); if (used) form.elements.usedQty.value = used[1].replace(',', '.');
   if (plain.includes('vento forte')) form.elements.wind.value = 'Forte'; else if (plain.includes('vento pouco') || plain.includes('pouco vento')) form.elements.wind.value = 'Pouco'; else if (plain.includes('sem vento')) form.elements.wind.value = 'Não';
-  if (plain.includes('neblina')) form.elements.fog.value = 'Sim';
-  if (plain.includes('ate 1h') || plain.includes('ate 1 hora')) form.elements.rainAfter.value = 'Até 1h'; else if (plain.includes('ate 3h') || plain.includes('ate 3 horas')) form.elements.rainAfter.value = 'Até 3h'; else if (plain.includes('mesmo dia')) form.elements.rainAfter.value = 'No mesmo dia';
+  if (plain.includes('neblina')) form.elements.fog.value = 'Sim'; else if (plain.includes('sem neblina')) form.elements.fog.value = 'Não';
+  if (plain.includes('ate 1h') || plain.includes('ate 1 hora')) form.elements.rainAfter.value = 'Até 1h'; else if (plain.includes('ate 3h') || plain.includes('ate 3 horas')) form.elements.rainAfter.value = 'Até 3h'; else if (plain.includes('mesmo dia')) form.elements.rainAfter.value = 'No mesmo dia'; else if (plain.includes('nao choveu') || plain.includes('sem chuva')) form.elements.rainAfter.value = 'Não';
+  if (plain.includes('solo molhado')) form.elements.wetSoil.value = 'Sim'; else if (plain.includes('solo seco')) form.elements.wetSoil.value = 'Não';
+  ['manha', 'tarde', 'noite'].forEach(period => { if (plain.includes(period)) form.elements.timeOfDay.value = period === 'manha' ? 'Manhã' : period[0].toUpperCase() + period.slice(1); });
   ['praga', 'doenca', 'mato', 'preventivo'].forEach(reason => { if (plain.includes(reason)) form.elements.reason.value = reason === 'doenca' ? 'Doença' : reason[0].toUpperCase() + reason.slice(1); });
+  const operator = plain.match(/operador(?:a)?\s+([a-z\s]{2,})(?:\.|,|$)/); if (operator) form.elements.operator.value = operator[1].trim().replace(/\b\w/g, l => l.toUpperCase());
+  const problem = plain.match(/(?:problema|alvo|contra)\s+([a-z\s]{2,})(?:\.|,|$)/); if (problem) form.elements.problem.value = problem[1].trim();
   const reapply = plain.match(/reaplic(?:ar|acao)?\s*(?:em)?\s*(\d+)\s*dias?/); if (reapply) form.elements.reapplyDays.value = reapply[1];
   const grace = plain.match(/carencia\s*(?:de)?\s*(\d+)\s*dias?/); if (grace) form.elements.graceDays.value = grace[1];
   ['problem', 'operator', 'note'].forEach(name => { if (!form.elements[name].value) form.elements[name].placeholder = 'Não informado — toque para editar'; });
-  const missing = [
+  const missing = getAiMissingFields();
+  const status = document.getElementById(statusElementId);
+  if (status) status.innerHTML = missing.length
+    ? `<div>Não informado: ${missing.join(', ')}. Revise e edite manualmente antes de confirmar.</div>`
+    : '<div>Campos principais interpretados. Revise todos os dados antes de confirmar.</div>';
+  updateApplicationCalculations();
+  return true;
+}
+function interpretVoiceText() {
+  if (parseApplicationNarrative(document.getElementById('voiceText').value, 'voiceStatus')) toast('Interpretação preenchida. Revise e confirme antes de salvar.');
+}
+function interpretAiFieldText() {
+  const parsed = parseApplicationNarrative(document.getElementById('aiText').value, 'aiStatus');
+  if (!parsed) return;
+  renderAiConfirmation();
+  document.getElementById('aiConfirmation').classList.remove('hidden');
+  toast('IA de Campo interpretou o relato. Confirme para salvar.');
+}
+function getAiMissingFields() {
+  const form = document.getElementById('applicationForm');
+  return [
     ['date', 'data'], ['cultureId', 'cultura'], ['fieldId', 'talhão/local'], ['hectares', 'área aplicada'],
     ['productId', 'produto'], ['dose', 'dose por hectare'], ['usedQty', 'quantidade usada'], ['operator', 'operador'],
   ].filter(([name]) => !form.elements[name].value).map(([, label]) => label);
-  document.getElementById('voiceStatus').innerHTML = missing.length
-    ? `<div>Não informado: ${missing.join(', ')}. Revise e edite manualmente antes de confirmar.</div>`
-    : '<div>Campos principais interpretados. Revise todos os dados antes de confirmar.</div>';
-  updateApplicationCalculations(); toast('Interpretação preenchida. Revise e confirme antes de salvar.');
+}
+function valueOrMissing(value) { return value || 'não informado'; }
+function renderAiConfirmation() {
+  const form = document.getElementById('applicationForm');
+  const data = Object.fromEntries(new FormData(form));
+  const product = getProduct(data.productId);
+  const rows = [
+    ['Data', data.date ? formatDate(data.date) : ''], ['Cultura', getCulture(data.cultureId)?.name], ['Talhão/local', getField(data.fieldId)?.name],
+    ['Área aplicada', data.hectares ? qty(data.hectares, 'ha') : ''], ['Produto', product?.name], ['Tipo de produto', data.productType || product?.type],
+    ['Dose por hectare', data.dose ? qty(data.dose, product?.unit || '') : ''], ['Quantidade calculada', form.elements.calculatedQty.value], ['Quantidade usada', data.usedQty ? qty(data.usedQty, product?.unit || '') : ''],
+    ['Custo total', form.elements.totalCost.value], ['Custo por hectare', form.elements.costPerHa.value], ['Diferença percentual', form.elements.difference.value],
+    ['Motivo', data.reason], ['Problema', data.problem], ['Nível', data.level], ['Operador', data.operator],
+    ['Vento', data.wind], ['Neblina', data.fog], ['Chuva depois', data.rainAfter], ['Solo molhado', data.wetSoil], ['Horário', data.timeOfDay],
+    ['Próxima reaplicação', form.elements.nextReapply.value], ['Fim da carência', form.elements.graceEnd.value],
+  ];
+  document.getElementById('aiStructuredFields').innerHTML = rows.map(([label, value]) => {
+    const finalValue = valueOrMissing(value);
+    return `<div class="structured-field ${finalValue === 'não informado' ? 'missing' : ''}"><span>${label}</span><strong>${finalValue}</strong></div>`;
+  }).join('');
+}
+function confirmAiApplication() {
+  const missing = getAiMissingFields().filter(label => !['operador'].includes(label));
+  if (missing.length) {
+    document.getElementById('aiStatus').innerHTML = `<div>Antes de salvar, complete: ${missing.join(', ')}. Clique em "Editar campos" para revisar.</div>`;
+    toast('Confirmação bloqueada: há campos obrigatórios não informados.');
+    return;
+  }
+  saveApplicationFromForm(document.getElementById('applicationForm'));
+  document.getElementById('aiConfirmation').classList.add('hidden');
 }
 function selectByText(select, records, plain) { const found = records.find(record => plain.includes(normalize(record.name))); if (found) select.value = found.id; }
-function startSpeechCapture() {
+function startSpeechCapture(targetId = 'voiceText') {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) return toast('Reconhecimento de voz indisponível neste navegador. Digite o texto no campo.');
   const recognition = new SpeechRecognition(); recognition.lang = 'pt-BR'; recognition.interimResults = false;
-  recognition.onresult = event => { document.getElementById('voiceText').value = event.results[0][0].transcript; toast('Voz capturada. Clique em interpretar.'); };
+  recognition.onresult = event => { document.getElementById(targetId).value = event.results[0][0].transcript; toast('Voz capturada. Clique em interpretar.'); };
   recognition.start();
 }
+
 function toast(message) { const node = document.getElementById('toast'); node.textContent = message; node.classList.add('show'); setTimeout(() => node.classList.remove('show'), 2600); }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -20,6 +20,7 @@ Depois acesse `http://127.0.0.1:4173`.
 - Baixa automática do estoque ao salvar uma aplicação.
 - Alertas para estoque baixo, produto insuficiente, chuva, vento, carência e reaplicações.
 - Registro manual ou por voz/texto, sempre com revisão antes de salvar.
+- Aba "IA de Campo" para interpretar relatos falados ou digitados, mostrar campos estruturados, sinalizar dados não informados e exigir confirmação antes do salvamento.
 - Histórico com filtros e relatórios gerenciais.
 
 ## Aviso
