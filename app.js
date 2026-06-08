@@ -5,6 +5,7 @@ const LEVELS = ["baixo", "médio", "alto"];
 const WIND = ["Não", "pouco", "forte"];
 const YESNO = ["Não", "sim"];
 const RAIN = ["Não", "até 1h", "até 3h", "no mesmo dia"];
+const INFORMED = "Não informado";
 const PERIOD = ["manhã", "tarde", "noite"];
 const REAPPLY = ["não informado", "3", "7", "10", "14", "21"];
 const STORAGE_KEY = "pulverizaSafraState";
@@ -91,6 +92,9 @@ function refreshSelects() {
   fillSelect("filterCulture", state.cultures, "Todas");
   fillSelect("filterField", state.fields, "Todos");
   fillSelect("filterProduct", state.products, "Todos");
+  fillSelect("fieldAiCulture", state.cultures, INFORMED);
+  fillSelect("fieldAiField", state.fields, INFORMED);
+  fillSelect("fieldAiProduct", state.products, INFORMED);
 }
 
 function riskFor(app) {
@@ -267,17 +271,11 @@ function bindForms() {
 
   applicationForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    const existing = applicationId.value ? byId("applications", applicationId.value) : null;
-    if (existing) restoreStock(existing);
-    const app = getApplicationFromForm();
-    const product = byId("products", app.productId);
-    if (product) product.stock = Math.max(0, Number(product.stock || 0) - Number(app.usedQty || 0));
-    upsert("applications", app);
+    saveApplication(getApplicationFromForm(), applicationId.value);
     applicationForm.reset();
     applicationDate.value = todayISO();
     applicationId.value = "";
     updateApplicationCalculations();
-    refreshAll();
     setScreen("historico");
   });
 }
@@ -293,9 +291,22 @@ function unitCost() {
   return Number(productPurchased.value) ? Number(productPrice.value || 0) / Number(productPurchased.value) : 0;
 }
 
+function saveApplication(app, existingId = "") {
+  const existing = existingId ? byId("applications", existingId) : null;
+  if (existing) restoreStock(existing);
+  const product = byId("products", app.productId);
+  const requestedQty = Number(app.usedQty || 0);
+  const deductedQty = product ? Math.min(Number(product.stock || 0), requestedQty) : 0;
+  if (product) product.stock = Math.max(0, Number(product.stock || 0) - deductedQty);
+  app.quantidadeAbatidaEstoque = deductedQty;
+  upsert("applications", app);
+  refreshAll();
+}
+
 function restoreStock(app) {
   const product = byId("products", app.productId);
-  if (product) product.stock = Number(product.stock || 0) + Number(app.usedQty || 0);
+  const restoredQty = app.quantidadeAbatidaEstoque ?? app.usedQty ?? 0;
+  if (product) product.stock = Number(product.stock || 0) + Number(restoredQty || 0);
 }
 
 function getApplicationFromForm() {
@@ -309,7 +320,7 @@ function getApplicationFromForm() {
     productType: applicationProductType.value,
     dose: Number(applicationDose.value),
     calculatedQty: Number(applicationCalculatedQty.dataset.value || 0),
-    usedQty: Number(applicationUsedQty.value),
+    usedQty: Number(applicationUsedQty.value || applicationCalculatedQty.dataset.value || 0),
     totalCost: Number(applicationTotalCost.dataset.value || 0),
     costHa: Number(applicationCostHa.dataset.value || 0),
     difference: Number(applicationDifference.dataset.value || 0),
@@ -410,6 +421,329 @@ function fillApplicationForm(app) {
   updateApplicationCalculations();
 }
 
+
+function normalizeText(text) {
+  return String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function parseNumberExpression(raw) {
+  const text = normalizeText(raw).replace(/,/g, ".");
+  const numeric = text.match(/\d+(?:\.\d+)?/);
+  let value = numeric ? Number(numeric[0]) : 0;
+  const words = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, onze: 11, doze: 12, quinze: 15 };
+  Object.entries(words).forEach(([word, numberValue]) => {
+    if (!value && new RegExp(`\\b${word}\\b`).test(text)) value = numberValue;
+  });
+  if (text.includes("meio") || text.includes("meia")) value = value ? value + 0.5 : 0.5;
+  return value || "";
+}
+
+function findMention(collection, text) {
+  const normalized = normalizeText(text);
+  return state[collection].find((item) => normalized.includes(normalizeText(item.name))) || null;
+}
+
+function extractFieldAILabels(parsed) {
+  return {
+    culture: parsed.cultureId ? byId("cultures", parsed.cultureId)?.name : INFORMED,
+    field: parsed.fieldId ? byId("fields", parsed.fieldId)?.name : (parsed.fieldText || INFORMED),
+    product: parsed.productId ? byId("products", parsed.productId)?.name : (parsed.productText || INFORMED),
+  };
+}
+
+function interpretFieldAIReport(report) {
+  const text = normalizeText(report);
+  const culture = findMention("cultures", report);
+  const field = findMention("fields", report);
+  const product = findMention("products", report);
+  const area = text.match(/([\w\d,.]+(?:\s+e\s+meio|\s+e\s+meia)?)\s*(?:ha|hectare|hectares)\b/);
+  const used = text.match(/(?:usei|usado|usou|quantidade|gastei)\s+([\w\d,.]+(?:\s+e\s+meio|\s+e\s+meia)?)/);
+  const dose = text.match(/(?:dose|dosagem)\s*(?:de)?\s*([\w\d,.]+(?:\s+e\s+meio|\s+e\s+meia)?)/);
+  const fieldText = text.match(/talh(?:a|a)o\s+(?:do|da|de)?\s*([a-z0-9\s]+?)(?:,|\.|\s+\d|\s+com\s+|\s+usei\s+|\s+tinha\s+|$)/);
+  const productText = text.match(/(?:apliquei|aplicado|com|produto)\s+(?:o\s+|a\s+)?([a-z0-9\s]+?)(?:\s+no\s+|\s+na\s+|,|\.|\s+talh|\s+\d|$)/);
+  const reapply = text.match(/reaplic\w*\s*(?:em)?\s*(\d+)/);
+  const grace = text.match(/carencia\s*(?:de)?\s*(\d+)/);
+  const problem = text.match(/(?:controlar|controle de|contra|para)\s+([a-z0-9\s]+?)(?:,|\.|\s+reaplic|\s+carencia|$)/);
+  const type = TYPES.find((value) => text.includes(normalizeText(value))) || (product?.type || INFORMED);
+  let reason = INFORMED;
+  if (text.includes("buva") || text.includes("mato") || type === "herbicida") reason = "mato";
+  else if (text.includes("doenca") || type === "fungicida") reason = "doença";
+  else if (text.includes("praga") || text.includes("lagarta") || type === "inseticida") reason = "praga";
+  else if (text.includes("preventivo")) reason = "preventivo";
+
+  let wind = INFORMED;
+  if (text.includes("sem vento")) wind = "Não";
+  else if (text.includes("vento forte")) wind = "forte";
+  else if (text.includes("vento fraco") || text.includes("pouco vento") || text.includes("vento")) wind = "pouco";
+  const fog = text.includes("sem neblina") ? "Não" : (text.includes("neblina") ? "sim" : INFORMED);
+  let rain = INFORMED;
+  if (text.includes("nao choveu") || text.includes("sem chuva")) rain = "Não";
+  else if (text.includes("ate 1h") || text.includes("ate 1 hora")) rain = "até 1h";
+  else if (text.includes("ate 3h") || text.includes("ate 3 horas")) rain = "até 3h";
+  else if (text.includes("choveu")) rain = "no mesmo dia";
+
+  return {
+    date: text.includes("ontem") ? addDays(todayISO(), -1) : todayISO(),
+    cultureId: culture?.id || "",
+    fieldId: field?.id || "",
+    fieldText: fieldText?.[1]?.trim() || "",
+    hectares: area ? parseNumberExpression(area[1]) : "",
+    productId: product?.id || "",
+    productText: productText?.[1]?.trim() || "",
+    productType: type,
+    dose: dose ? parseNumberExpression(dose[1]) : "",
+    usedQty: used ? parseNumberExpression(used[1]) : "",
+    unit: product?.unit || (text.includes("litro") ? "L" : (text.includes("quilo") || text.includes("kg") ? "kg" : INFORMED)),
+    wind,
+    fog,
+    rain,
+    reason,
+    problem: problem?.[1]?.trim() || "",
+    reapplyDays: reapply?.[1] || "",
+    graceDays: grace?.[1] || "",
+    note: report.trim(),
+  };
+}
+
+function updateFieldAICalculations() {
+  const product = byId("products", fieldAiProduct.value);
+  if (product) {
+    fieldAiProductType.value = product.type || fieldAiProductType.value;
+    fieldAiUnit.value = product.unit || INFORMED;
+    if (product.doseRef && !fieldAiDose.value) fieldAiDose.value = product.doseRef;
+  } else if (!fieldAiUnit.value || fieldAiUnit.value !== "L" && fieldAiUnit.value !== "kg" && fieldAiUnit.value !== "ml" && fieldAiUnit.value !== "g") fieldAiUnit.value = INFORMED;
+  const hectares = Number(fieldAiHectares.value || 0);
+  const dose = Number(fieldAiDose.value || 0);
+  const calculated = hectares * dose;
+  const used = Number(fieldAiUsedQty.value || calculated || 0);
+  const totalCost = used * Number(product?.unitCost || 0);
+  const costHa = hectares ? totalCost / hectares : 0;
+  fieldAiCalculatedQty.value = calculated ? `${number(calculated, 3)} ${product?.unit || fieldAiUnit.value || ""}` : INFORMED;
+  fieldAiCalculatedQty.dataset.value = calculated;
+  fieldAiTotalCost.value = money(totalCost);
+  fieldAiTotalCost.dataset.value = totalCost;
+  fieldAiCostHa.value = money(costHa);
+  fieldAiCostHa.dataset.value = costHa;
+  fieldAiNextReapply.value = fieldAiReapplyDays.value ? addDays(fieldAiDate.value || todayISO(), fieldAiReapplyDays.value) : INFORMED;
+  fieldAiGraceEnd.value = fieldAiGraceDays.value ? addDays(fieldAiDate.value || todayISO(), fieldAiGraceDays.value) : INFORMED;
+  const alerts = [];
+  riskFor({ rain: fieldAiRain.value, wind: fieldAiWind.value, fog: fieldAiFog.value }).forEach((risk) => alerts.push(risk.text));
+  fieldAiAlerts.innerHTML = alerts.map((alert) => `<div class="inline-alert">${alert}</div>`).join("");
+}
+
+function fillFieldAIPreview(parsed) {
+  const labels = extractFieldAILabels(parsed);
+  fieldAiPreviewForm.classList.remove("hidden");
+  fieldAiDate.value = parsed.date || todayISO();
+  fieldAiCulture.value = parsed.cultureId || "";
+  fieldAiField.value = parsed.fieldId || "";
+  fieldAiHectares.value = parsed.hectares || "";
+  fieldAiProduct.value = parsed.productId || "";
+  fieldAiProductText.value = labels.product;
+  fieldAiProductType.value = parsed.productType || INFORMED;
+  fieldAiDose.value = parsed.dose || "";
+  fieldAiUsedQty.value = parsed.usedQty || "";
+  fieldAiUnit.value = parsed.unit || INFORMED;
+  fieldAiWind.value = parsed.wind || INFORMED;
+  fieldAiFog.value = parsed.fog || INFORMED;
+  fieldAiRain.value = parsed.rain || INFORMED;
+  fieldAiReason.value = parsed.reason || INFORMED;
+  fieldAiProblem.value = parsed.problem || INFORMED;
+  fieldAiReapplyDays.value = parsed.reapplyDays || "";
+  fieldAiGraceDays.value = parsed.graceDays || "";
+  fieldAiNote.value = `Relato original: ${parsed.note || INFORMED}\nCultura identificada: ${labels.culture}\nTalhão/local identificado: ${labels.field}\nProduto identificado: ${labels.product}`;
+  updateFieldAICalculations();
+}
+
+function getApplicationFromFieldAI() {
+  const calculated = Number(fieldAiCalculatedQty.dataset.value || 0);
+  const used = Number(fieldAiUsedQty.value || calculated || 0);
+  const difference = calculated ? ((used - calculated) / calculated) * 100 : 0;
+  return {
+    id: "",
+    date: fieldAiDate.value || todayISO(),
+    cultureId: fieldAiCulture.value,
+    fieldId: fieldAiField.value,
+    hectares: Number(fieldAiHectares.value || 0),
+    productId: fieldAiProduct.value,
+    productType: fieldAiProductType.value !== INFORMED ? fieldAiProductType.value : "não informado",
+    dose: Number(fieldAiDose.value || 0),
+    calculatedQty: calculated,
+    usedQty: used,
+    totalCost: Number(fieldAiTotalCost.dataset.value || 0),
+    costHa: Number(fieldAiCostHa.dataset.value || 0),
+    difference,
+    reason: fieldAiReason.value !== INFORMED ? fieldAiReason.value : "outro",
+    problem: fieldAiProblem.value !== INFORMED ? fieldAiProblem.value : "",
+    level: "baixo",
+    operator: "IA de Campo",
+    note: fieldAiNote.value,
+    wind: fieldAiWind.value !== INFORMED ? fieldAiWind.value : "Não",
+    fog: fieldAiFog.value !== INFORMED ? fieldAiFog.value : "Não",
+    rain: fieldAiRain.value !== INFORMED ? fieldAiRain.value : "Não",
+    wetSoil: "Não",
+    period: "manhã",
+    reapplyDays: fieldAiReapplyDays.value || "não informado",
+    nextReapply: fieldAiNextReapply.value !== INFORMED ? fieldAiNextReapply.value : "",
+    graceDays: Number(fieldAiGraceDays.value || 0),
+    graceEnd: fieldAiGraceEnd.value !== INFORMED ? fieldAiGraceEnd.value : "",
+  };
+}
+
+
+function normalizedToken(token) {
+  return normalizeText(token).replace(/[^a-z0-9]/g, "");
+}
+
+function removeSequentialDuplicateWords(text) {
+  return text.split(/\s+/).reduce((words, word) => {
+    const previous = words[words.length - 1] || "";
+    if (normalizedToken(previous) !== normalizedToken(word)) {
+      words.push(word);
+    } else {
+      const punctuation = word.match(/[,.!?;:]+$/)?.[0] || "";
+      if (punctuation && !previous.endsWith(punctuation)) words[words.length - 1] = `${previous.replace(/[,.!?;:]+$/, "")}${punctuation}`;
+    }
+    return words;
+  }, []).join(" ");
+}
+
+function removeSequentialDuplicatePhrases(text) {
+  let words = text.split(/\s+/).filter(Boolean);
+  for (let size = 6; size >= 2; size -= 1) {
+    const cleaned = [];
+    for (let index = 0; index < words.length; index += 1) {
+      const current = words.slice(index, index + size).map(normalizedToken).join(" ");
+      const previous = cleaned.slice(-size).map(normalizedToken).join(" ");
+      if (current && current === previous) {
+        index += size - 1;
+      } else {
+        cleaned.push(words[index]);
+      }
+    }
+    words = cleaned;
+  }
+  return words.join(" ");
+}
+
+function removeRepeatedPrefix(text) {
+  const words = text.split(/\s+/).filter(Boolean);
+  for (let size = Math.floor(words.length / 2); size >= 2; size -= 1) {
+    const first = words.slice(0, size).map(normalizedToken).join(" ");
+    const second = words.slice(size, size * 2).map(normalizedToken).join(" ");
+    if (first && first === second) return words.slice(0, size).concat(words.slice(size * 2)).join(" ");
+  }
+  return text;
+}
+
+function cleanSpeechTranscript(transcript) {
+  let cleaned = String(transcript || "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.!?;:])/g, "$1")
+    .trim();
+  let previous = "";
+  while (cleaned && cleaned !== previous) {
+    previous = cleaned;
+    cleaned = removeSequentialDuplicateWords(cleaned);
+    cleaned = removeSequentialDuplicatePhrases(cleaned);
+    cleaned = removeRepeatedPrefix(cleaned);
+  }
+  return cleaned;
+}
+
+function initFieldAI() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let isRecording = false;
+  let stoppedByUser = false;
+  let finalSegments = [];
+  let lastCleanTranscript = fieldAiText.value.trim();
+
+  function setRecordButton(label) {
+    fieldAiRecord.textContent = label;
+  }
+
+  function syncSegmentsFromText() {
+    const currentText = fieldAiText.value.trim();
+    if (currentText !== lastCleanTranscript) {
+      finalSegments = currentText ? [currentText] : [];
+      lastCleanTranscript = currentText;
+    }
+  }
+
+  function updateFinalTranscript() {
+    const cleaned = cleanSpeechTranscript(finalSegments.join(" "));
+    fieldAiText.value = cleaned;
+    lastCleanTranscript = cleaned;
+  }
+
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = "pt-BR";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.addEventListener("result", (event) => {
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        if (!result.isFinal) continue;
+        const transcript = result[0]?.transcript?.trim();
+        if (transcript) finalSegments.push(transcript);
+      }
+      updateFinalTranscript();
+      fieldAiSpeechStatus.textContent = "Texto capturado. Continue falando ou clique em Parar gravação.";
+    });
+    recognition.addEventListener("end", () => {
+      isRecording = false;
+      updateFinalTranscript();
+      if (stoppedByUser) {
+        setRecordButton("🎙️ Iniciar gravação");
+        fieldAiSpeechStatus.textContent = "Gravação finalizada. Revise o relato e clique em Interpretar relato.";
+      } else {
+        setRecordButton("🎙️ Continuar gravação");
+        fieldAiSpeechStatus.textContent = "O navegador encerrou a gravação. Clique em Continuar gravação para prosseguir sem apagar o texto.";
+      }
+    });
+  } else {
+    fieldAiSpeechStatus.textContent = "Gravação de áudio indisponível neste navegador. Digite o relato para interpretar.";
+  }
+
+  fieldAiRecord.addEventListener("click", () => {
+    if (!recognition) return;
+    if (isRecording) {
+      stoppedByUser = true;
+      recognition.stop();
+      setRecordButton("🎙️ Iniciar gravação");
+      fieldAiSpeechStatus.textContent = "Finalizando gravação e limpando repetições...";
+      return;
+    }
+    syncSegmentsFromText();
+    stoppedByUser = false;
+    isRecording = true;
+    setRecordButton("⏹️ Parar gravação");
+    fieldAiSpeechStatus.textContent = "Ouvindo... fale com calma e clique em Parar gravação quando terminar.";
+    recognition.start();
+  });
+  fieldAiInterpret.addEventListener("click", () => {
+    fieldAiText.value = cleanSpeechTranscript(fieldAiText.value);
+    lastCleanTranscript = fieldAiText.value.trim();
+    finalSegments = lastCleanTranscript ? [lastCleanTranscript] : [];
+    fillFieldAIPreview(interpretFieldAIReport(fieldAiText.value));
+  });
+  [fieldAiProduct, fieldAiHectares, fieldAiDose, fieldAiUsedQty, fieldAiDate, fieldAiReapplyDays, fieldAiGraceDays, fieldAiRain, fieldAiWind, fieldAiFog].forEach((input) => input.addEventListener("input", updateFieldAICalculations));
+  fieldAiPreviewForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!confirm("Confirmar e salvar esta aplicação interpretada pela IA de Campo?")) return;
+    saveApplication(getApplicationFromFieldAI());
+    fieldAiPreviewForm.reset();
+    fieldAiPreviewForm.classList.add("hidden");
+    fieldAiText.value = "";
+    finalSegments = [];
+    lastCleanTranscript = "";
+    setRecordButton("🎙️ Iniciar gravação");
+    setScreen("historico");
+  });
+}
+
 function initVoiceText() {
   voiceMode.addEventListener("click", () => voicePanel.classList.toggle("hidden"));
   manualMode.addEventListener("click", () => voicePanel.classList.add("hidden"));
@@ -452,12 +786,18 @@ function init() {
   fillStaticSelect("weatherWetSoil", YESNO);
   fillStaticSelect("weatherPeriod", PERIOD);
   fillStaticSelect("applicationReapplyQuick", REAPPLY);
+  fillStaticSelect("fieldAiProductType", [INFORMED, ...TYPES]);
+  fillStaticSelect("fieldAiWind", [INFORMED, ...WIND]);
+  fillStaticSelect("fieldAiFog", [INFORMED, ...YESNO]);
+  fillStaticSelect("fieldAiRain", [INFORMED, ...RAIN]);
+  fillStaticSelect("fieldAiReason", [INFORMED, ...REASONS]);
   applicationDate.value = todayISO();
   initNavigation();
   bindForms();
   bindCalculations();
   bindDelegatedActions();
   initVoiceText();
+  initFieldAI();
   refreshAll();
   updateApplicationCalculations();
 }
