@@ -15,7 +15,10 @@
         <p class="eyebrow">Controle de aplicações agrícolas</p>
         <h1>Pulveriza Safra</h1>
       </div>
-      <button class="primary-action" data-open-section="nova-aplicacao">+ Nova aplicação</button>
+      <div class="header-actions">
+        <button class="primary-action" data-open-section="ia-campo">🎙️ Falar aplicação</button>
+        <button class="primary-action" data-open-section="nova-aplicacao">+ Nova aplicação</button>
+      </div>
     </header>
 
     <nav class="tab-bar" aria-label="Navegação principal">
@@ -24,6 +27,7 @@
       <button class="tab" data-section="talhoes">Talhões</button>
       <button class="tab" data-section="produtos">Produtos</button>
       <button class="tab" data-section="nova-aplicacao">Nova aplicação</button>
+      <button class="tab" data-section="ia-campo">IA de Campo</button>
       <button class="tab" data-section="alertas">Alertas</button>
       <button class="tab" data-section="historico">Histórico</button>
       <button class="tab" data-section="relatorios">Relatórios</button>
@@ -39,6 +43,7 @@
           </div>
           <div class="hero-icon" aria-hidden="true">🌱</div>
         </div>
+        <button class="field-ai-cta" type="button" data-open-section="ia-campo">🎙️ Falar aplicação</button>
         <div id="dashboardCards" class="metric-grid"></div>
       </section>
 
@@ -157,6 +162,57 @@
           <label class="wide">Observação<textarea id="applicationNote" rows="3"></textarea></label>
           <div id="applicationAlerts" class="wide inline-alerts"></div>
           <button class="primary-action wide" type="submit">Confirmar e salvar aplicação</button>
+        </form>
+      </section>
+
+
+
+      <section id="ia-campo" class="screen">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Registro assistido</p>
+            <h2>IA de Campo</h2>
+            <p class="hint">Fale ou digite o relato da aplicação. A IA local organiza os dados para revisão; nada é salvo sem confirmação.</p>
+          </div>
+        </div>
+        <div class="form-card ai-input-card">
+          <button id="fieldAiRecord" class="primary-action" type="button">Gravar áudio</button>
+          <p id="fieldAiSpeechStatus" class="hint wide">Use o microfone do navegador quando disponível ou digite o relato abaixo.</p>
+          <label class="wide">Relato de campo
+            <textarea id="fieldAiText" rows="6" placeholder="Ex.: Hoje apliquei herbicida no milho, talhão de cima, 2 hectares, usei 1 litro e meio, tinha vento fraco, sem neblina, não choveu, era para controlar buva, reaplicar em 12 dias."></textarea>
+          </label>
+          <button id="fieldAiInterpret" class="primary-action wide" type="button">Interpretar relato</button>
+        </div>
+        <form id="fieldAiPreviewForm" class="form-card hidden">
+          <div class="wide confirmation-banner">
+            <strong>Pré-visualização para confirmação</strong>
+            <p>Revise e edite os campos antes de confirmar. Campos não identificados aparecem como "Não informado".</p>
+          </div>
+          <label>Data<input id="fieldAiDate" type="date" /></label>
+          <label>Cultura<select id="fieldAiCulture"></select></label>
+          <label>Talhão/local<select id="fieldAiField"></select></label>
+          <label>Área aplicada (ha)<input id="fieldAiHectares" type="number" min="0" step="0.01" placeholder="Não informado" /></label>
+          <label>Produto<select id="fieldAiProduct"></select></label>
+          <label>Produto citado<input id="fieldAiProductText" placeholder="Não informado" /></label>
+          <label>Tipo de produto<select id="fieldAiProductType"></select></label>
+          <label>Dose por hectare<input id="fieldAiDose" type="number" min="0" step="0.001" placeholder="Não informado" /></label>
+          <label>Quantidade usada<input id="fieldAiUsedQty" type="number" min="0" step="0.001" placeholder="Não informado" /></label>
+          <label>Unidade<input id="fieldAiUnit" readonly placeholder="Não informado" /></label>
+          <label>Quantidade calculada<input id="fieldAiCalculatedQty" readonly /></label>
+          <label>Custo total<input id="fieldAiTotalCost" readonly /></label>
+          <label>Custo por hectare<input id="fieldAiCostHa" readonly /></label>
+          <label>Vento<select id="fieldAiWind"></select></label>
+          <label>Neblina<select id="fieldAiFog"></select></label>
+          <label>Chuva depois<select id="fieldAiRain"></select></label>
+          <label>Motivo da aplicação<select id="fieldAiReason"></select></label>
+          <label>Praga/doença/mato<input id="fieldAiProblem" placeholder="Não informado" /></label>
+          <label>Reaplicação (dias)<input id="fieldAiReapplyDays" type="number" min="0" step="1" placeholder="Não informado" /></label>
+          <label>Próxima reaplicação<input id="fieldAiNextReapply" readonly /></label>
+          <label>Carência (dias)<input id="fieldAiGraceDays" type="number" min="0" step="1" placeholder="Não informado" /></label>
+          <label>Fim da carência<input id="fieldAiGraceEnd" readonly /></label>
+          <label class="wide">Observação<textarea id="fieldAiNote" rows="3" placeholder="Não informado"></textarea></label>
+          <div id="fieldAiAlerts" class="wide inline-alerts"></div>
+          <button class="primary-action wide" type="submit">Confirmar e salvar</button>
         </form>
       </section>
 
