@@ -21,7 +21,8 @@ Os dados são salvos no `localStorage` do navegador, permitindo uso simples sem 
 - Cadastro de talhões/locais vinculados às culturas.
 - Cadastro de produtos e estoque com custo unitário automático, estoque mínimo e estimativa de hectares cobertos.
 - Registro manual de aplicações com cálculo automático de quantidade, custo total, custo por hectare e diferença percentual.
-- Registro por voz/texto com interpretação inicial e confirmação obrigatória antes de salvar.
+- Nova aba **IA de Campo** para registrar aplicações por áudio ou texto, com pré-visualização editável e confirmação obrigatória antes de salvar.
+- Botão destacado **🎙️ Falar aplicação** no Dashboard para abrir rapidamente a IA de Campo.
 - Checklist climático com alertas por chuva, vento forte e neblina.
 - Controle de reaplicação e carência.
 - Tela de alertas operacionais.
